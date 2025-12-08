@@ -39,7 +39,7 @@ env/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-*.ipynb
+# *.ipynb  # Comentado: los notebooks son parte del proyecto educativo
 
 # Testing
 .pytest_cache/
