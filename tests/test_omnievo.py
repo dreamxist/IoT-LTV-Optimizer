@@ -119,6 +119,47 @@ class TestGeneticOptimizer:
         assert len(result.history) == 5
 
 
+class TestBenchmark:
+    """Tests para el módulo de benchmarking (Sprint 4)."""
+
+    def test_run_benchmark(self):
+        from omnievo.benchmark import run_benchmark
+
+        X = np.random.rand(50, 4)
+        y = np.random.rand(50) * 100
+
+        optimizer = GeneticOptimizer(
+            population_size=10,
+            generations=5,
+            random_state=42,
+            verbose=False,
+        )
+        result = optimizer.fit(X, y)
+
+        report = run_benchmark(
+            X, y, X, y,
+            ga_weights=result.best_weights,
+            channel_names=["ch1", "ch2", "ch3", "ch4"],
+            verbose=False,
+        )
+
+        assert report.ga_rmse > 0
+        assert len(report.business_insights) == 4
+        assert len(report.statistical_tests) == 3
+
+    def test_generate_business_insights(self):
+        from omnievo.benchmark import generate_business_insights
+
+        weights = np.array([0.4, 0.3, 0.2, 0.1])
+        channels = ["nfc", "app", "email", "facebook"]
+
+        insights = generate_business_insights(weights, channels)
+
+        assert len(insights) == 4
+        assert insights[0].rank == 1
+        assert np.isclose(insights[0].weight, 0.4)
+
+
 class TestExperiments:
     """Tests para el módulo de experimentación (Sprint 3)."""
 

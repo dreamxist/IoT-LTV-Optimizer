@@ -30,6 +30,13 @@ from omnievo.experiments import (
     GridSearchResult,
     ExperimentResult,
 )
+from omnievo.benchmark import (
+    run_benchmark,
+    run_statistical_tests,
+    generate_business_insights,
+    generate_final_report,
+    BenchmarkReport,
+)
 
 __version__ = "0.1.0"
 __all__ = [
@@ -60,4 +67,10 @@ __all__ = [
     "run_full_experiment",
     "GridSearchResult",
     "ExperimentResult",
+    # Benchmark (Sprint 4)
+    "run_benchmark",
+    "run_statistical_tests",
+    "generate_business_insights",
+    "generate_final_report",
+    "BenchmarkReport",
 ]
