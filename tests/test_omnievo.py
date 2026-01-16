@@ -119,5 +119,67 @@ class TestGeneticOptimizer:
         assert len(result.history) == 5
 
 
+class TestExperiments:
+    """Tests para el módulo de experimentación (Sprint 3)."""
+
+    def test_grid_search_runs(self):
+        from omnievo.experiments import grid_search
+
+        X = np.random.rand(50, 4)
+        y = np.random.rand(50) * 100
+
+        param_grid = {
+            "population_size": [10, 20],
+            "generations": [5, 10],
+        }
+
+        result = grid_search(
+            X, y, X, y,  # Usamos mismo set para test rápido
+            param_grid=param_grid,
+            n_runs=1,
+            verbose=False,
+        )
+
+        assert result.best_result is not None
+        assert len(result.results) == 4  # 2 x 2 configuraciones
+
+    def test_cross_validate_runs(self):
+        from omnievo.experiments import cross_validate
+
+        X = np.random.rand(50, 4)
+        y = np.random.rand(50) * 100
+
+        result = cross_validate(
+            X, y,
+            k_folds=3,
+            optimizer_params={"population_size": 10, "generations": 5},
+            verbose=False,
+        )
+
+        assert "rmse_mean" in result
+        assert "pearson_mean" in result
+        assert len(result["folds"]) == 3
+
+    def test_analyze_convergence(self):
+        from omnievo.experiments import analyze_convergence
+
+        X = np.random.rand(50, 4)
+        y = np.random.rand(50) * 100
+
+        optimizer = GeneticOptimizer(
+            population_size=10,
+            generations=20,
+            random_state=42,
+            verbose=False,
+        )
+
+        result = optimizer.fit(X, y)
+        conv = analyze_convergence(result)
+
+        assert "improvement_pct" in conv
+        assert "convergence_gen" in conv
+        assert conv["total_generations"] == 20
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

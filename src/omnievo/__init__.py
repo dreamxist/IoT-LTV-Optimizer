@@ -19,6 +19,16 @@ from omnievo.visualization import (
     plot_weights,
     plot_comparison,
     plot_prediction_scatter,
+    plot_evolution_dashboard,
+)
+from omnievo.experiments import (
+    grid_search,
+    cross_validate,
+    sensitivity_analysis,
+    analyze_convergence,
+    run_full_experiment,
+    GridSearchResult,
+    ExperimentResult,
 )
 
 __version__ = "0.1.0"
@@ -41,4 +51,13 @@ __all__ = [
     "plot_weights",
     "plot_comparison",
     "plot_prediction_scatter",
+    "plot_evolution_dashboard",
+    # Experiments (Sprint 3)
+    "grid_search",
+    "cross_validate",
+    "sensitivity_analysis",
+    "analyze_convergence",
+    "run_full_experiment",
+    "GridSearchResult",
+    "ExperimentResult",
 ]
