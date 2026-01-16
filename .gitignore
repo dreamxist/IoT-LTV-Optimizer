@@ -49,5 +49,17 @@ htmlcov/
 # Data
 *.csv
 *.xlsx
-*.json
 data/
+
+# Results (generated outputs)
+results/
+!results/.gitkeep
+
+# Logs
+*.log
+
+# Type checking
+.mypy_cache/
+
+# Ruff
+.ruff_cache/
