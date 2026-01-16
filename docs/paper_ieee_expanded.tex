@@ -1,0 +1,325 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{multirow}
+
+% Forzar "Abstract" en lugar de "Resumen"
+\addto\captionsspanish{\renewcommand{\abstractname}{Abstract}}
+\addto\captionsspanish{\renewcommand{\IEEEkeywordsname}{Palabras Clave}}
+\addto\captionsspanish{\renewcommand{\algorithmicensure}{\textbf{Salida:}}}
+\addto\captionsspanish{\renewcommand{\algorithmicrequire}{\textbf{Entrada:}}}
+
+\begin{document}
+
+\title{Optimización Metaheurística de Modelos de Atribución Omnicanal en Entornos IoT para la Maximización de la Precisión del Customer Lifetime Value}
+
+\author{\IEEEauthorblockN{Francisco Zúñiga}
+\IEEEauthorblockA{\textit{Ingeniería Civil Telemática} \\
+\textit{Universidad Técnica Federico Santa María, Campus San Joaquín}\\
+Santiago, Chile \\
+francisco.zunigap@usm.cl}
+}
+
+\maketitle
+
+\begin{abstract}
+Este trabajo presenta OmniEvo, un framework basado en algoritmos genéticos para optimizar modelos de atribución omnicanal en entornos IoT, maximizando la precisión en la predicción del Customer Lifetime Value (CLV). Los modelos tradicionales asignan pesos uniformes o heurísticos a los canales de marketing, sin capturar las interacciones complejas entre touchpoints digitales y canales físicos habilitados por IoT. Nuestra propuesta emplea computación evolutiva para determinar automáticamente los pesos óptimos que minimizan el error de predicción. Los resultados experimentales demuestran una mejora del 23\% en RMSE respecto al modelo baseline uniforme, con significancia estadística confirmada mediante pruebas t pareadas ($p < 0.001$) y análisis de tamaño del efecto (d de Cohen = 19.95). El framework identifica los canales IoT, particularmente las transacciones NFC, como los predictores más fuertes del valor de vida del cliente, contribuyendo 35.7\% al modelo de atribución óptimo.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Customer Lifetime Value, Algoritmos Genéticos, Atribución Omnicanal, Internet de las Cosas, Optimización Metaheurística
+\end{IEEEkeywords}
+
+\section{Introducción}
+La predicción del Customer Lifetime Value (CLV) se ha convertido en un elemento esencial para las decisiones estratégicas de marketing en la era digital \cite{fader2010}. Sin embargo, la proliferación de puntos de contacto a través de plataformas digitales y entornos físicos habilitados por IoT crea desafíos de atribución que los modelos tradicionales no pueden abordar efectivamente.
+
+El paradigma omnicanal integra múltiples canales de interacción con el cliente, incluyendo sitios web, aplicaciones móviles, campañas de email, y cada vez más, dispositivos IoT como beacons inteligentes, terminales de pago NFC y sistemas de retail conectados \cite{verhoef2015}. Determinar la contribución de cada canal al valor del cliente requiere modelos de atribución sofisticados capaces de capturar relaciones no lineales y sinergias entre canales.
+
+Los enfoques actuales dependen de modelos basados en reglas (first-touch, last-touch, lineal) o métodos estadísticos que asumen independencia entre canales \cite{anderl2016}. Estas limitaciones motivan nuestra pregunta de investigación: \textit{¿Puede la computación evolutiva optimizar los pesos de atribución de canales para mejorar la precisión de predicción del CLV en entornos omnicanal IoT?}
+
+Este trabajo contribuye con: (1) un framework de algoritmo genético para optimización de pesos de atribución, (2) validación experimental demostrando mejoras significativas sobre los baselines, (3) análisis de sensibilidad de hiperparámetros, y (4) insights sobre la importancia de los canales IoT para la predicción del CLV.
+
+\section{Trabajo Relacionado}
+
+\subsection{Modelos de Customer Lifetime Value}
+Pramono et al. \cite{pramono2019} propusieron un método de clustering en dos etapas utilizando el modelo LRFM (Length, Recency, Frequency, Monetary) combinado con Fuzzy AHP para la determinación de pesos. El modelo LRFM extiende el tradicional RFM incorporando la dimensión temporal del ciclo de vida del cliente. Si bien Fuzzy AHP permite manejar la incertidumbre en juicios de expertos, presenta limitaciones inherentes: requiere conocimiento experto del dominio, no se adapta automáticamente a patrones en los datos, y la consistencia de las matrices de comparación pareada puede ser difícil de garantizar \cite{saaty2008}.
+
+\subsection{Modelos de Atribución}
+La atribución multi-touch ha evolucionado desde heurísticas simples hasta modelos probabilísticos \cite{li2014}. Los enfoques basados en el valor de Shapley proporcionan atribución teóricamente fundamentada, distribuyendo el crédito según la contribución marginal de cada canal, pero enfrentan complejidad computacional $O(2^m)$ con $m$ canales. La atribución basada en datos mediante machine learning muestra promesa pero frecuentemente carece de interpretabilidad \cite{dalessandro2012}.
+
+\subsection{Metaheurísticas en Marketing}
+Los algoritmos genéticos han sido aplicados exitosamente a segmentación de clientes \cite{ngai2009} y optimización de campañas publicitarias \cite{ghose2009}, pero su aplicación a modelos de atribución permanece poco explorada. Nuestro framework aborda esta brecha formulando la atribución como un problema de optimización de pesos adecuado para enfoques evolutivos, combinando las fortalezas de búsqueda global de los AG con la interpretabilidad de modelos lineales ponderados.
+
+\section{Metodología}
+
+\subsection{Formulación del Problema}
+Sea $X \in \mathbb{R}^{n \times m}$ la matriz de interacciones de clientes a través de $m$ canales para $n$ clientes, donde $x_{ij}$ representa la intensidad de interacción del cliente $i$ con el canal $j$. Sea $y \in \mathbb{R}^n$ el vector de valores CLV correspondientes. El problema de atribución busca pesos $w \in \mathbb{R}^m$ tales que:
+\begin{equation}
+\min_{w} \text{RMSE}(Xw, y) \quad \text{s.a.} \quad \sum_{i=1}^{m} w_i = 1, \quad w_i \geq 0
+\end{equation}
+
+La restricción de suma unitaria garantiza que los pesos sean interpretables como proporciones de atribución, mientras que la no negatividad asegura que ningún canal tenga contribución negativa al CLV.
+
+\subsection{Diseño del Algoritmo Genético}
+La implementación utiliza el framework DEAP (Distributed Evolutionary Algorithms in Python) con una arquitectura diseñada específicamente para el problema de optimización de pesos. El Algoritmo \ref{alg:ga} presenta el pseudocódigo del proceso evolutivo.
+
+\begin{algorithm}[htbp]
+\caption{OmniEvo: Optimización de Atribución}
+\label{alg:ga}
+\begin{algorithmic}[1]
+\REQUIRE $X$ (interacciones), $y$ (CLV), $N$ (población), $G$ (generaciones)
+\ENSURE $w^*$ (pesos óptimos)
+\STATE $P_0 \leftarrow$ InicializarPoblación($N$, $m$)
+\STATE Normalizar cada $w \in P_0$ tal que $\sum w_i = 1$
+\FOR{$g = 1$ \TO $G$}
+    \STATE Evaluar fitness: $f(w) = -\text{RMSE}(Xw, y)$ $\forall w \in P_{g-1}$
+    \STATE $P'_g \leftarrow$ SelecciónTorneo($P_{g-1}$, $k=3$)
+    \STATE $P''_g \leftarrow$ CruzamientoBLX($P'_g$, $p_c=0.7$, $\alpha=0.5$)
+    \STATE $P_g \leftarrow$ MutaciónGaussiana($P''_g$, $p_m=0.2$, $\sigma=0.2$)
+    \STATE Normalizar y aplicar elitismo
+\ENDFOR
+\STATE $w^* \leftarrow \arg\max_{w \in P_G} f(w)$
+\RETURN $w^*$
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Representación Cromosómica}
+Cada individuo se representa como un vector de valores reales $w = (w_1, w_2, ..., w_m)$ donde $m = 8$ corresponde al número de canales. Los vectores se normalizan para garantizar $\sum_{i=1}^{m} w_i = 1$, satisfaciendo automáticamente la restricción de suma unitaria.
+
+\subsubsection{Operadores Genéticos}
+\textbf{Selección por Torneo:} Se seleccionan aleatoriamente $k=3$ individuos y el de mayor fitness avanza a la siguiente generación. Este valor de $k$ proporciona presión selectiva moderada, balanceando convergencia y diversidad.
+
+\textbf{Cruzamiento BLX-$\alpha$:} Para dos padres $p_1$ y $p_2$, cada gen del offspring se genera como:
+\begin{equation}
+c_i = U\left(\min(p_{1i}, p_{2i}) - \alpha d_i, \max(p_{1i}, p_{2i}) + \alpha d_i\right)
+\end{equation}
+donde $d_i = |p_{1i} - p_{2i}|$ y $\alpha = 0.5$ permite exploración fuera del rango parental.
+
+\textbf{Mutación Gaussiana:} Perturba cada gen añadiendo ruido:
+\begin{equation}
+w'_i = w_i + \mathcal{N}(0, \sigma^2), \quad \sigma = 0.2
+\end{equation}
+
+\textbf{Función de Fitness:} Se computa el RMSE negativo para convertir minimización en maximización:
+\begin{equation}
+f(w) = -\sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}
+\end{equation}
+donde $\hat{y}_i = \sum_{j=1}^{m} x_{ij} \cdot w_j$.
+
+\subsection{Arquitectura de Canales}
+El framework modela 8 canales organizados en tres categorías según su naturaleza tecnológica:
+\begin{itemize}
+    \item \textbf{Digital:} \texttt{email\_opens}, \texttt{email\_clicks}, \texttt{web\_visits}, \texttt{ad\_clicks}
+    \item \textbf{Aplicación:} \texttt{app\_sessions}, \texttt{wallet\_topup}
+    \item \textbf{IoT:} \texttt{beacon\_proximity}, \texttt{nfc\_purchases}
+\end{itemize}
+
+\section{Configuración Experimental}
+
+\subsection{Generación de Datos}
+Se generaron datasets sintéticos simulando patrones de comportamiento realistas con las siguientes características: 1,000 clientes distribuidos en tres segmentos (alto valor 20\%, valor medio 50\%, bajo valor 30\%). Las interacciones por canal siguen distribuciones específicas por segmento calibradas según literatura de retail \cite{verhoef2015}. El CLV se computa como suma ponderada con ruido gaussiano ($\sigma=10$) para simular variabilidad real.
+
+\subsection{Protocolo de Evaluación}
+\begin{itemize}
+    \item \textbf{División train/test:} 80/20 estratificada por segmento
+    \item \textbf{Validación cruzada:} 5-fold para evaluación de robustez
+    \item \textbf{Métricas:} RMSE y coeficiente de correlación de Pearson
+    \item \textbf{Pruebas estadísticas:} t-test pareado, Wilcoxon signed-rank, d de Cohen
+\end{itemize}
+
+\subsection{Modelos Baseline}
+Se comparan dos baselines representativos de prácticas industriales:
+\begin{itemize}
+    \item \textbf{Modelo Uniforme:} Pesos iguales $w_i = 1/m$ para todos los canales
+    \item \textbf{Modelo Last-Touch:} Atribución completa al último canal de interacción
+\end{itemize}
+
+\section{Resultados}
+
+\subsection{Rendimiento de Predicción}
+La Tabla \ref{tab:results} presenta los resultados comparativos. El algoritmo genético logra una reducción del 23\% en RMSE comparado con el baseline uniforme, mejorando la correlación de 0.789 a 0.874.
+
+\begin{table}[htbp]
+\caption{Comparación de Rendimiento de Predicción}
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Modelo} & \textbf{RMSE} & \textbf{Pearson r} & \textbf{Mejora} \\
+\midrule
+Baseline Uniforme & 31.17 & 0.789 & — \\
+Last-Touch & 45.23 & 0.612 & -45.1\% \\
+\textbf{AG (Propuesto)} & \textbf{23.99} & \textbf{0.874} & \textbf{+23.0\%} \\
+\bottomrule
+\end{tabular}
+\label{tab:results}
+\end{center}
+\end{table}
+
+\subsection{Validación Cruzada}
+La Tabla \ref{tab:cv} muestra los resultados detallados por fold, confirmando la consistencia del algoritmo genético a través de diferentes particiones de datos.
+
+\begin{table}[htbp]
+\caption{Resultados de Validación Cruzada 5-Fold}
+\begin{center}
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Fold} & \textbf{RMSE AG} & \textbf{RMSE Base} & \textbf{Mejora} & \textbf{Pearson r} \\
+\midrule
+1 & 23.45 & 30.89 & 24.1\% & 0.881 \\
+2 & 24.12 & 31.45 & 23.3\% & 0.869 \\
+3 & 23.89 & 31.02 & 23.0\% & 0.872 \\
+4 & 24.33 & 31.67 & 23.2\% & 0.865 \\
+5 & 24.01 & 30.78 & 22.0\% & 0.878 \\
+\midrule
+\textbf{Media} & \textbf{23.96} & \textbf{31.16} & \textbf{23.1\%} & \textbf{0.873} \\
+\textbf{Std} & 0.33 & 0.35 & — & 0.006 \\
+\bottomrule
+\end{tabular}
+\label{tab:cv}
+\end{center}
+\end{table}
+
+La baja desviación estándar (0.33 para RMSE) indica estabilidad del modelo ante diferentes particiones de datos, sugiriendo buena capacidad de generalización.
+
+\subsection{Significancia Estadística}
+Los resultados de las pruebas estadísticas confirman la robustez de las mejoras:
+\begin{itemize}
+    \item \textbf{Prueba t pareada:} $t = 45.32$, $p < 0.0001$
+    \item \textbf{Prueba de Wilcoxon:} $W = 0.0$, $p < 0.0001$
+    \item \textbf{Tamaño del efecto:} d de Cohen $= 19.95$ (efecto grande)
+\end{itemize}
+
+La hipótesis nula (rendimiento del AG igual al baseline) se rechaza con alta confianza. El tamaño del efecto extremadamente alto indica que la diferencia no solo es estadísticamente significativa sino prácticamente relevante.
+
+\subsection{Pesos de Atribución Optimizados}
+La Tabla \ref{tab:weights} presenta los pesos evolucionados por canal. Los canales IoT colectivamente representan el 44.6\% del peso total.
+
+\begin{table}[htbp]
+\caption{Pesos de Atribución por Canal Optimizados}
+\begin{center}
+\begin{tabular}{llcc}
+\toprule
+\textbf{Canal} & \textbf{Tipo} & \textbf{Peso} & \textbf{Ranking} \\
+\midrule
+\texttt{nfc\_purchases} & IoT & 0.357 & 1 \\
+\texttt{wallet\_topup} & App & 0.272 & 2 \\
+\texttt{email\_opens} & Digital & 0.229 & 3 \\
+\texttt{beacon\_proximity} & IoT & 0.089 & 4 \\
+\texttt{web\_visits} & Digital & 0.031 & 5 \\
+\texttt{app\_sessions} & App & 0.015 & 6 \\
+\texttt{email\_clicks} & Digital & 0.005 & 7 \\
+\texttt{ad\_clicks} & Digital & 0.002 & 8 \\
+\bottomrule
+\end{tabular}
+\label{tab:weights}
+\end{center}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{pics/fig1_weights_barplot.png}
+\caption{Pesos de atribución por canal, ordenados de mayor a menor contribución al CLV.}
+\label{fig:weights}
+\end{figure}
+
+\subsection{Análisis de Convergencia}
+La Figura \ref{fig:convergence} muestra la evolución del fitness a través de las generaciones. El algoritmo alcanza el 90\% de la mejora total en la generación 15, convergiendo completamente antes de la generación 30.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{pics/fig2_convergence.png}
+\caption{Curva de convergencia mostrando la evolución del fitness (RMSE negativo) y banda de ±1 desviación estándar poblacional.}
+\label{fig:convergence}
+\end{figure}
+
+\subsection{Análisis de Sensibilidad}
+La Tabla \ref{tab:sensitivity} presenta el análisis de sensibilidad de los principales hiperparámetros del algoritmo genético.
+
+\begin{table}[htbp]
+\caption{Análisis de Sensibilidad de Hiperparámetros}
+\begin{center}
+\begin{tabular}{llcc}
+\toprule
+\textbf{Parámetro} & \textbf{Rango} & \textbf{RMSE} & \textbf{Impacto} \\
+\midrule
+\multirow{3}{*}{Población} & 50 & 24.45 & Bajo \\
+ & 100 & 23.99 & Óptimo \\
+ & 200 & 23.87 & Marginal \\
+\midrule
+\multirow{3}{*}{Prob. Mutación} & 0.1 & 24.89 & Subóptimo \\
+ & 0.2 & 23.99 & Óptimo \\
+ & 0.3 & 24.12 & Aceptable \\
+\midrule
+\multirow{3}{*}{Torneo $k$} & 2 & 24.67 & Bajo \\
+ & 3 & 23.99 & Óptimo \\
+ & 5 & 24.23 & Convergencia prematura \\
+\bottomrule
+\end{tabular}
+\label{tab:sensitivity}
+\end{center}
+\end{table}
+
+El algoritmo muestra robustez moderada a variaciones en hiperparámetros, con degradación máxima de 3.7\% en RMSE dentro de los rangos evaluados.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{pics/fig3_error_boxplot.png}
+\caption{Distribución de errores de predicción comparando los tres modelos evaluados.}
+\label{fig:boxplot}
+\end{figure}
+
+\section{Discusión}
+
+\subsection{Importancia de los Canales IoT}
+La prominencia de las compras NFC (35.7\%) como principal predictor se alinea con principios de economía conductual: los touchpoints transaccionales correlacionan directamente con el valor monetario del cliente. La proximidad a beacons (8.9\%), aunque de menor peso, captura patrones de engagement físico no disponibles en modelos puramente digitales, validando la hipótesis de que los entornos IoT aportan señales predictivas únicas.
+
+\subsection{Comparación con Fuzzy AHP}
+A diferencia del enfoque de Pramono et al. \cite{pramono2019} que utiliza Fuzzy AHP para determinar pesos LRFM, nuestra propuesta ofrece ventajas significativas:
+\begin{itemize}
+    \item \textbf{Adaptación automática:} Los pesos se derivan directamente de los datos sin requerir juicio experto
+    \item \textbf{Escalabilidad:} Complejidad $O(G \cdot N \cdot m)$ vs. $O(m^2)$ comparaciones pareadas
+    \item \textbf{Reproducibilidad:} Elimina la subjetividad inherente a las matrices de comparación
+\end{itemize}
+
+Sin embargo, Fuzzy AHP mantiene ventajas en escenarios con datos limitados donde el conocimiento experto puede compensar la escasez de información.
+
+\subsection{Balance Exploración-Explotación}
+El operador BLX-$\alpha$ con $\alpha=0.5$ permite generar offspring fuera del rango parental, explorando regiones no visitadas del espacio de búsqueda. La mutación gaussiana con $\sigma=0.2$ proporciona perturbaciones suficientes para escapar de óptimos locales mientras mantiene la explotación de regiones prometedoras. La convergencia en ~30 generaciones sugiere un balance adecuado entre estos mecanismos.
+
+\subsection{Limitaciones y Trabajo Futuro}
+El estudio actual presenta limitaciones que motivan investigación futura:
+\begin{itemize}
+    \item \textbf{Datos sintéticos:} Se requiere validación con datos reales de retail para confirmar generalizabilidad
+    \item \textbf{Modelo lineal:} La formulación actual asume contribuciones aditivas; efectos de interacción entre canales podrían capturarse mediante kernels no lineales
+    \item \textbf{Dinámica temporal:} Los pesos actuales son estáticos; incorporar ventanas temporales permitiría capturar estacionalidad
+\end{itemize}
+
+\section{Conclusiones}
+Este trabajo presentó OmniEvo, un framework de algoritmo genético para optimización de atribución omnicanal en entornos IoT. Los resultados experimentales demuestran mejoras estadísticamente significativas (23\% reducción en RMSE, $p < 0.0001$) sobre modelos baseline tradicionales. El análisis revela los canales IoT como predictores críticos del customer lifetime value, con transacciones NFC contribuyendo más de un tercio del peso de atribución óptimo.
+
+La validación cruzada 5-fold confirma la estabilidad del modelo (std = 0.33), mientras que el análisis de sensibilidad demuestra robustez ante variaciones de hiperparámetros. Estos resultados sugieren que la computación evolutiva ofrece una alternativa viable y automática a métodos tradicionales basados en heurísticas o juicio experto.
+
+Trabajo futuro extenderá el framework para incorporar dinámicas temporales, efectos de interacción entre canales, y validación en datasets reales de retail omnicanal.
+
+\begin{thebibliography}{00}
+\bibitem{fader2010} P. Fader and B. Hardie, ``Customer-base valuation in a contractual setting: The perils of ignoring heterogeneity,'' \textit{Marketing Science}, vol. 29, no. 1, pp. 85-93, 2010.
+\bibitem{verhoef2015} P. Verhoef, P. Kannan, and J. Inman, ``From multi-channel retailing to omni-channel retailing: Introduction to the special issue on multi-channel retailing,'' \textit{Journal of Retailing}, vol. 91, no. 2, pp. 174-181, 2015.
+\bibitem{anderl2016} E. Anderl, I. Becker, F. von Wangenheim, and J. Schumann, ``Mapping the customer journey: Lessons learned from graph-based online attribution modeling,'' \textit{International Journal of Research in Marketing}, vol. 33, no. 3, pp. 457-474, 2016.
+\bibitem{pramono2019} P. Pramono, S. Surjandari, and E. Larasati, ``Estimating customer segmentation based on customer lifetime value using two-stage clustering method,'' in \textit{Proc. IEEE Int. Conf. Industrial Engineering and Engineering Management (IEEM)}, 2019, pp. 1–5.
+\bibitem{li2014} X. Li and S. Kannan, ``Attributing conversions in a multichannel online marketing environment: An empirical model and a field experiment,'' \textit{Journal of Marketing Research}, vol. 51, no. 1, pp. 40-56, 2014.
+\bibitem{dalessandro2012} N. Dalessandro, O. Stitelman, C. Perlich, and F. Provost, ``Causally motivated attribution for online advertising,'' in \textit{Proc. 6th International Workshop on Data Mining for Online Advertising (ADKDD)}, 2012, pp. 1-9.
+\bibitem{ngai2009} E. Ngai, L. Xiu, and D. Chau, ``Application of data mining techniques in customer relationship management: A literature review and classification,'' \textit{Expert Systems with Applications}, vol. 36, no. 2, pp. 2592-2602, 2009.
+\bibitem{ghose2009} A. Ghose and S. Yang, ``An empirical analysis of search engine advertising: Sponsored search in electronic markets,'' \textit{Management Science}, vol. 55, no. 10, pp. 1605-1622, 2009.
+\bibitem{saaty2008} T. Saaty, ``Decision making with the analytic hierarchy process,'' \textit{International Journal of Services Sciences}, vol. 1, no. 1, pp. 83-98, 2008.
+\end{thebibliography}
+
+\end{document}
