@@ -1,211 +1,141 @@
-# OmniEvo: Optimización de Atribución Omnicanal con Algoritmos Genéticos
+# OmniEvo
 
-> **Proyecto de Soft Computing** - Optimización metaheurística de modelos de atribución omnicanal en entornos IoT para la maximización de la precisión del Customer Lifetime Value (LTV).
+Optimizacion de atribucion omnicanal usando algoritmos geneticos.
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![DEAP](https://img.shields.io/badge/DEAP-1.4+-green.svg)](https://deap.readthedocs.io/)
-[![Tests](https://img.shields.io/badge/tests-12%20passed-brightgreen.svg)](#)
+Proyecto de Soft Computing - usa GA para encontrar los pesos optimos de atribucion que predicen el Customer Lifetime Value (LTV) en entornos con datos digitales + IoT.
 
----
+## Que es esto?
 
-## Paper Base
-
-Este proyecto extiende y mejora la metodología propuesta en:
-
-> **Pramono, P. P., Surjandari, I., & Laoh, E.** (2019). *"Estimating Customer Segmentation based on Customer Lifetime Value Using Two-Stage Clustering Method"*. IEEE ICSSSM 2019. [[IEEE Xplore]](https://ieeexplore.ieee.org/document/8887704/)
-
-### Innovación de OmniEvo
-
-| Aspecto | Paper Original | OmniEvo |
-|---------|----------------|---------|
-| **Variables** | LRFM (4 variables) | 9 canales omnicanal |
-| **Determinación de pesos** | Fuzzy AHP (expertos) | **Algoritmo Genético** (data-driven) |
-| **Objetivo** | Segmentación de clientes | Predicción de LTV |
-| **Fuente de datos** | Transacciones | Digital + App + **IoT** |
-
-**Contribución:** Reemplazamos la determinación subjetiva de pesos (Fuzzy AHP) por un proceso evolutivo que optimiza los pesos directamente desde los datos.
-
----
-
-## Problema
-
-En marketing híbrido (digital + físico), determinar qué canal realmente impulsa el valor del cliente es un desafío conocido como el **Problema de Atribución**. Los modelos tradicionales como "Last Click" o "Linear" son arbitrarios y no capturan la complejidad de las interacciones omnicanal.
-
-## Solución
-
-Utilizar un **Algoritmo Genético** para evolucionar pesos de atribución óptimos que minimicen el error entre el LTV predicho y el LTV real:
+En marketing omnicanal, el problema de atribucion es: cual canal realmente genera valor? Los modelos clasicos (last-click, linear, etc) son arbitrarios. Este proyecto usa un algoritmo genetico para aprender los pesos directamente de los datos.
 
 ```
-Datos Omnicanal → Algoritmo Genético → Pesos Óptimos → Predicción LTV
-     [9 canales]    [50 ind × 100 gen]    [Σwᵢ = 1]      [RMSE ↓]
+Datos Omnicanal -> GA -> Pesos Optimos -> Prediccion LTV
+   [9 canales]    [evoluciona]  [suman 1]     [minimiza error]
 ```
 
----
+## Basado en
 
-## Escenario de Simulación: Smart Music Festival
+Paper de Pramono et al (2019) sobre segmentacion con LRFM + Fuzzy AHP, pero cambiamos:
+- Fuzzy AHP (subjetivo) -> **Algoritmo Genetico** (data-driven)
+- 4 variables LRFM -> 9 canales omnicanal (digital + app + IoT)
 
-Generación de datos sintéticos integrando tres capas de datos:
-
-| Capa | Canales | Tecnología |
-|------|---------|------------|
-| **Digital** | Facebook Ads, Email Opens, Web Visits | AdTech |
-| **App** | App Opens, Ticket Purchase, Wallet Top-up | Backend |
-| **Física (IoT)** | RFID Entry, Stage Dwell Time, NFC Purchases | Sensores |
-
----
-
-## Instalación
+## Setup
 
 ```bash
-# Clonar el repositorio
-git clone <repo-url>
+git clone <repo>
 cd IoT-LTV-Optimizer
 
-# Crear entorno virtual
 python3 -m venv .venv
 source .venv/bin/activate
-
-# Instalar dependencias
 pip install -e .
 
-# Ejecutar tests
+# correr tests
 pytest tests/ -v
 ```
 
-## Uso Rápido
+## Uso rapido
 
 ```python
 from omnievo import DataGenerator, GeneticOptimizer, compare_baselines
 from sklearn.model_selection import train_test_split
 
-# 1. Generar datos sintéticos
-generator = DataGenerator(n_users=1000, random_state=42)
-df = generator.generate()
-channels = generator.get_channel_names()
+# generar datos
+gen = DataGenerator(n_users=1000, random_state=42)
+df = gen.generate()
+channels = gen.get_channel_names()
 
-# 2. Preparar datos
+# preparar
 X = df[channels].values
 y = df['LTV_real'].values
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
 
-# 3. Optimizar con Algoritmo Genético
-optimizer = GeneticOptimizer(
-    population_size=50,
-    generations=100,
-    random_state=42
-)
-result = optimizer.fit(X_train, y_train)
+# optimizar
+opt = GeneticOptimizer(population_size=50, generations=100)
+result = opt.fit(X_train, y_train)
 
-# 4. Ver pesos optimizados
-print("Pesos de Atribución:")
-for ch, w in result.get_weights_dict(channels).items():
-    print(f"  {ch}: {w:.3f} ({w*100:.1f}%)")
+# ver pesos
+print("Pesos:")
+for ch, w in zip(channels, result["best_weights"]):
+    print(f"  {ch}: {w:.3f}")
 
-# 5. Comparar con baselines
-comparison = compare_baselines(X_test, y_test, ga_weights=result.best_weights)
-print(comparison)
+# comparar con baselines
+print(compare_baselines(X_test, y_test, ga_weights=result["best_weights"]))
 ```
 
----
+## Datos simulados: Smart Music Festival
 
-## Estructura del Proyecto
+Tres capas de datos:
 
-```
-.
-├── src/omnievo/           # Código fuente modular
-│   ├── data_generator.py  # Simulador de datos (Sprint 1)
-│   ├── genetic.py         # Core del Algoritmo Genético (Sprint 2)
-│   ├── fitness.py         # Funciones de fitness (RMSE, Pearson)
-│   ├── baselines.py       # Modelos baseline (Uniforme, Last-Touch, etc.)
-│   └── visualization.py   # Gráficas y dashboards
-├── notebooks/             # Experimentos interactivos
-├── docs/                  # Documentación del proyecto
-│   ├── init.md            # Definición del problema
-│   ├── paper_base.md      # Análisis del paper de referencia
-│   ├── roadmap.md         # Plan de desarrollo
-│   └── GA.md              # Guía de Algoritmos Genéticos
-├── tests/                 # Tests unitarios (pytest)
-└── results/               # Outputs de experimentos
-```
+| Capa | Canales |
+|------|---------|
+| Digital | facebook_ads, email_opens, web_visits |
+| App | app_opens, ticket_purchase, wallet_topup |
+| IoT | rfid_entry, stage_dwell_time, nfc_purchases |
 
----
-
-## Documentación
-
-| Documento | Descripción |
-|-----------|-------------|
-| [Definición del Problema](docs/init.md) | Contexto, formulación matemática e hipótesis |
-| [Análisis del Paper Base](docs/paper_base.md) | Comparación con metodología LRFM + Fuzzy AHP |
-| [Roadmap de Desarrollo](docs/roadmap.md) | Plan de sprints detallado |
-| [Guía de Algoritmos Genéticos](docs/GA.md) | Referencia técnica de AG |
-
----
-
-## Técnica de Resolución
-
-### Algoritmo Genético
-
-| Componente | Implementación | Parámetros |
-|------------|----------------|------------|
-| **Codificación** | Vector de floats | n = número de canales |
-| **Restricción** | Normalización | Σwᵢ = 1, wᵢ ≥ 0 |
-| **Fitness** | -RMSE (minimizar error) | |
-| **Selección** | Tournament | k=3 |
-| **Cruce** | Blend Crossover | α=0.5 |
-| **Mutación** | Gaussian | σ=0.1, indpb=0.3 |
-| **Elitismo** | Top-k preservado | k=2 |
-
-### Modelos Baseline
-
-- **Uniforme (1/N):** Distribución equitativa
-- **Last-Touch:** 100% al último canal
-- **First-Touch:** 100% al primer canal
-- **Position Decay:** Pesos decrecientes
-- **Random:** Control negativo
-
----
-
-## Resultados Preliminares
+## Estructura
 
 ```
-============================================================
-COMPARACIÓN DE MODELOS (Test Set, 500 usuarios)
-============================================================
-            Modelo      RMSE   Pearson  Mejora vs Uniforme
-Algoritmo Genético    27.24     0.88           15.4%
-    Uniforme (1/N)    32.22     0.89            0.0%
-            Random    32.42     0.85           -0.6%
-        Last-Touch    32.86     0.83           -2.0%
-============================================================
+src/omnievo/
+  data_generator.py   # genera datos sinteticos
+  genetic.py          # algoritmo genetico (DEAP)
+  fitness.py          # funciones de fitness
+  baselines.py        # modelos baseline para comparar
+  experiments.py      # grid search, cross validation
+  benchmark.py        # tests estadisticos, reportes
+  visualization.py    # graficas
+
+notebooks/            # ejemplos interactivos
+tests/               # pytest
+docs/                # documentacion
 ```
 
-El AG logra una **mejora del 15.4%** en RMSE sobre el modelo uniforme.
+## El GA
 
----
+| Componente | Config |
+|------------|--------|
+| Codificacion | vector de floats |
+| Restriccion | pesos suman 1, no negativos |
+| Fitness | -RMSE (minimizar) |
+| Seleccion | tournament (k=3) |
+| Cruce | blend crossover |
+| Mutacion | gaussiana |
+| Elitismo | top 2 |
 
-## Roadmap
+## Baselines
 
-| Sprint | Objetivo | Estado |
-|--------|----------|--------|
-| Sprint 1 | Generador de datos sintéticos | ✅ Completado |
-| Sprint 2 | Core del Algoritmo Genético | ✅ Completado |
-| Sprint 3 | Experimentación y tuning | 🔄 En progreso |
-| Sprint 4 | Validación y benchmarking | ⏳ Pendiente |
+- Uniforme (1/N)
+- Last-Touch
+- First-Touch
+- Position Decay
+- Random
 
----
+## Resultados
+
+El GA mejora ~15-23% vs el modelo uniforme en RMSE.
+
+```
+Modelo              RMSE    Mejora
+----------------------------------
+GA                 23.99    23.0%
+Uniforme           31.17     0.0%
+Last-Touch         45.23   -45.1%
+```
+
+## Notebooks
+
+- `01_intro.ipynb` - ejemplo basico
+- `02_tuning.ipynb` - grid search y cross validation
+- `03_validacion.ipynb` - tests estadisticos y benchmark
+
+## Docs
+
+- `docs/init.md` - definicion del problema
+- `docs/paper_base.md` - analisis del paper original
+- `docs/GA.md` - guia de algoritmos geneticos
+- `docs/roadmap.md` - plan de desarrollo
 
 ## Referencias
 
-1. **Paper Base:** Pramono, P. P., Surjandari, I., & Laoh, E. (2019). *Estimating Customer Segmentation based on Customer Lifetime Value Using Two-Stage Clustering Method*. IEEE ICSSSM 2019. [[DOI]](https://ieeexplore.ieee.org/document/8887704/)
+- Pramono et al (2019) - LRFM + Fuzzy AHP para segmentacion
+- DEAP - libreria de algoritmos evolutivos
 
-2. **LRFM Model:** Alvandi, M., Fazli, S., & Abdoli, F. (2012). *K-Mean Clustering Method For Analysis Customer Lifetime Value With LRFM Relationship Model*.
-
-3. **Algoritmos Genéticos:** Eiben, A. E., & Smith, J. E. (2015). *Introduction to Evolutionary Computing*. Springer.
-
-4. **DEAP:** Fortin, F. A., et al. (2012). *DEAP: Evolutionary Algorithms Made Easy*. [[Docs]](https://deap.readthedocs.io/)
-
----
-
-## Licencia
-
-Proyecto académico - Soft Computing / Computación Evolutiva
