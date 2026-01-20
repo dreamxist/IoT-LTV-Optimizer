@@ -1,65 +1,53 @@
 """
-OmniEvo: Optimización de Atribución Omnicanal con Algoritmos Genéticos
-
-Este paquete implementa un sistema de optimización metaheurística para resolver
-el problema de atribución en entornos omnicanal (digital + físico/IoT).
+OmniEvo - optimizacion de atribucion omnicanal con GA
+proyecto de soft computing
 """
 
 from omnievo.data_generator import DataGenerator, CHANNEL_CONFIG
-from omnievo.genetic import GeneticOptimizer
+from omnievo.genetic import GeneticOptimizer, OptimizationResult
 from omnievo.fitness import calculate_rmse, calculate_fitness
 from omnievo.baselines import (
-    uniform_model,
-    last_touch_model,
-    random_model,
-    compare_baselines,
+    uniform_model, last_touch_model, random_model, compare_baselines,
 )
 from omnievo.visualization import (
-    plot_convergence,
-    plot_weights,
-    plot_comparison,
-    plot_prediction_scatter,
-    plot_evolution_dashboard,
+    plot_convergence, plot_weights, plot_comparison,
+    plot_prediction_scatter, plot_evolution_dashboard,
 )
 from omnievo.experiments import (
-    grid_search,
-    cross_validate,
-    sensitivity_analysis,
-    analyze_convergence,
-    run_full_experiment,
-    GridSearchResult,
-    ExperimentResult,
+    grid_search, cross_validate, sensitivity_analysis,
+    analyze_convergence, run_full_experiment,
+    GridSearchResult, ExperimentResult,
 )
 from omnievo.benchmark import (
-    run_benchmark,
-    run_statistical_tests,
-    generate_business_insights,
-    generate_final_report,
-    BenchmarkReport,
+    run_benchmark, run_statistical_tests, generate_business_insights,
+    generate_final_report, BenchmarkReport,
 )
 
 __version__ = "0.1.0"
+
+# lo que se exporta con "from omnievo import *"
 __all__ = [
-    # Data Generation
+    # data
     "DataGenerator",
     "CHANNEL_CONFIG",
-    # Genetic Algorithm
+    # ga
     "GeneticOptimizer",
-    # Fitness
+    "OptimizationResult",
+    # fitness
     "calculate_rmse",
     "calculate_fitness",
-    # Baselines
+    # baselines
     "uniform_model",
     "last_touch_model",
     "random_model",
     "compare_baselines",
-    # Visualization
+    # viz
     "plot_convergence",
     "plot_weights",
     "plot_comparison",
     "plot_prediction_scatter",
     "plot_evolution_dashboard",
-    # Experiments (Sprint 3)
+    # experiments
     "grid_search",
     "cross_validate",
     "sensitivity_analysis",
@@ -67,7 +55,7 @@ __all__ = [
     "run_full_experiment",
     "GridSearchResult",
     "ExperimentResult",
-    # Benchmark (Sprint 4)
+    # benchmark
     "run_benchmark",
     "run_statistical_tests",
     "generate_business_insights",
